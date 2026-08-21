@@ -1,1 +1,128 @@
-if not game:IsLoaded() then game.Loaded:Wait() end local AxiomSilent = {Running = true, FarmDistance = 8, FastAttackDelay = 0.01, ScanRadius = 160, TweenSpeed = 350} local Players = game:GetService("Players") local LocalPlayer = Players.LocalPlayer local TweenService = game:GetService("TweenService") local ReplicatedStorage = game:GetService("ReplicatedStorage") local Remotes = ReplicatedStorage:WaitForChild("Remotes", 5) local CommF = Remotes and Remotes:WaitForChild("CommF", 5) local function GetOptimalZone() local level = LocalPlayer.Data.Level.Value if level >= 1 and level < 15 then return {Mob = "Bandit [Lv. 5]", QuestName = "BanditQuest1", QuestID = 1, Pivot = Vector3.new(1050, 15, 1500)} elseif level >= 15 and level < 30 then return {Mob = "Monkey [Lv. 14]", QuestName = "JungleQuest", QuestID = 1, Pivot = Vector3.new(-1600, 40, 40)} elseif level >= 30 and level < 60 then return {Mob = "Gorilla [Lv. 20]", QuestName = "JungleQuest", QuestID = 2, Pivot = Vector3.new(-1200, 15, -450)} elseif level >= 60 and level < 90 then return {Mob = "Pirate [Lv. 35]", QuestName = "BuggyQuest1", QuestID = 1, Pivot = Vector3.new(-1150, 15, 3850)} else return {Mob = "Bandit [Lv. 5]", QuestName = "BanditQuest1", QuestID = 1, Pivot = Vector3.new(1050, 15, 1500)} end end local function SilentTween(targetCFrame) local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() local hrp = char:WaitForChild("HumanoidRootPart", 5) if not hrp then return end local distance = (hrp.Position - targetCFrame.Position).Magnitude if distance < 15 then hrp.CFrame = targetCFrame return end local duration = distance / AxiomSilent.TweenSpeed local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCFrame}) tween:Play() local bv = Instance.new("BodyVelocity") bv.Velocity = Vector3.new(0, 0, 0) bv.MaxForce = Vector3.new(9e9, 9e9, 9e9) bv.Parent = hrp tween.Completed:Connect(function() if bv then bv:Destroy() end end) end local function SilentGather(mobName, gatherPosition) for _, enemy in ipairs(workspace.Enemies:GetChildren()) do if enemy.Name == mobName and enemy:FindFirstChild("HumanoidRootPart") then local enemyHum = enemy:FindFirstChildOfClass("Humanoid") if enemyHum and enemyHum.Health > 0 then enemy.HumanoidRootPart.CanCollide = false enemy.HumanoidRootPart.CFrame = CFrame.new(gatherPosition) end end end end task.spawn(function() while AxiomSilent.Running do task.wait(AxiomSilent.FastAttackDelay) local char = LocalPlayer.Character local hrp = char and char:FindFirstChild("HumanoidRootPart") if hrp then local zone = GetOptimalZone() for _, enemy in ipairs(workspace.Enemies:GetChildren()) do if enemy.Name == zone.Mob and enemy:FindFirstChild("HumanoidRootPart") then if (enemy.HumanoidRootPart.Position - hrp.Position).Magnitude <= AxiomSilent.ScanRadius then local enemyHum = enemy:FindFirstChildOfClass("Humanoid") if enemyHum and enemyHum.Health > 0 then if CommF then CommF:InvokeServer("Attack", "Combat", enemy.HumanoidRootPart.Position) end end end end end end end end) task.spawn(function() while AxiomSilent.Running do task.wait(0.1) local char = LocalPlayer.Character local hrp = char and char:FindFirstChild("HumanoidRootPart") local hum = char and char:FindFirstChildOfClass("Humanoid") if hrp and hum and hum.Health > 0 then local zone = GetOptimalZone() local hasQuest = LocalPlayer.PlayerGui.Main.Quest.Visible if not hasQuest then if CommF then CommF:InvokeServer("StartQuest", zone.QuestName, zone.QuestID) else SilentTween(CFrame.new(zone.Pivot)) end else local targetFound = false local targetMobInstance = nil for _, enemy in ipairs(workspace.Enemies:GetChildren()) do if enemy.Name == zone.Mob and enemy:FindFirstChild("HumanoidRootPart") then local enemyHum = enemy:FindFirstChildOfClass("Humanoid") if enemyHum and enemyHum.Health > 0 then targetFound = true targetMobInstance = enemy break end end end if targetFound and targetMobInstance then local securePosition = targetMobInstance.HumanoidRootPart.Position + Vector3.new(0, AxiomSilent.FarmDistance, 0) hrp.CFrame = CFrame.new(securePosition) * CFrame.Angles(math.rad(-90), 0, 0) SilentGather(zone.Mob, targetMobInstance.HumanoidRootPart.Position) else for _, spawner in ipairs(workspace._WorldOrigin.EnemySpawners:GetChildren()) do if spawner.Name == zone.Mob then SilentTween(spawner.CFrame) break end end end end end end end) print("[Axiom Engine] Standalone Active!")
+-- [[ SIGMA ALL-IN-ONE INFINITE PIPELINE ]]
+local P, W, R = game:GetService("Players").LocalPlayer, game:GetService("Workspace"), game:GetService("ReplicatedStorage")
+local VU, TS, HS = game:GetService("VirtualUser"), game:GetService("TeleportService"), game:GetService("HttpService")
+local C = P.Character or P.CharacterAdded:Wait()
+local Rem = R:FindFirstChild("Remotes") or R:FindFirstChild("CommF")
+
+-- Cấu hình hệ thống nén dữ liệu ngầm
+local Config = {
+    FlySpeed = 280,
+    MaxPing = 90,
+    BlacklistServers = {},
+    StoredFruits = {},
+    Islands = {
+        {N="Bandits", M=1, X=10, V=Vector3.new(100,20,100)},
+        {N="Monkeys", M=10, X=30, V=Vector3.new(1200,30,-500)}
+    }
+}
+
+-- [MODULE 1: ANTI-IDLE KICK BYPASS]
+P.Idled:Connect(function()
+    VU:Button2Down(Vector2.new(0, 0), W.CurrentCamera.CFrame)
+    task.wait(0.1)
+    VU:Button2Up(Vector2.new(0, 0), W.CurrentCamera.CFrame)
+end)
+
+-- [MODULE 2: LINEAR VELOCITY FLY]
+local function ApplyFly(root, targetPos)
+    local bv = root:FindFirstChild("SigmaFly")
+    if not bv then
+        bv = Instance.new("BodyVelocity")
+        bv.Name = "SigmaFly"
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bv.Parent = root
+    end
+    local dir = (targetPos - root.Position)
+    bv.Velocity = dir.Magnitude > 15 and dir.Unit * Config.FlySpeed or Vector3.new(0,0,0)
+end
+
+-- [MODULE 3: SMART SERVER HOPPER VIA API]
+local function ExecuteServerHop()
+    local success, result = pcall(function()
+        return HS:JSONDecode(game:HttpGet("https://roblox.com" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=50"))
+    end)
+    if success and result and result.data then
+        for _, s in ipairs(result.data) do
+            if s.id ~= game.JobId and s.playing < s.maxPlayers and not Config.BlacklistServers[s.id] then
+                if s.ping and s.ping <= Config.MaxPing then
+                    Config.BlacklistServers[s.id] = true
+                    pcall(function() TS:TeleportToPlaceInstance(game.PlaceId, s.id, P) end)
+                    task.wait(1)
+                end
+            end
+        end
+    end
+end
+
+-- [MODULE 4: SCANNER TARGETS & VIP FRUITS]
+local function CheckServerStatus()
+    for _, m in ipairs((W:FindFirstChild("Enemies") or W):GetChildren()) do
+        if m:IsA("Model") and m:FindFirstChild("Humanoid") and m.Humanoid.Health > 0 then
+            if table.find({"Dough King", "Rip Indra", "Cake Prince", "Darkbeard"}, m.Name) then return true, m, "Boss" end
+        end
+    end
+    for _, o in ipairs(W:GetChildren()) do
+        if o:IsA("Tool") and (string.find(o.Name, "Fruit") or o:FindFirstChild("Handle")) then return true, o, "Fruit" end
+    end
+    return false, nil, nil
+end
+
+-- [MAIN REPLICATION PIPELINE EXECUTION]
+task.spawn(function()
+    task.wait(3) -- Đợi server ổn định gói tin
+    while task.wait(0.01) do
+        local root = C:FindFirstChild("HumanoidRootPart")
+        if root then
+            local hasTarget, obj, mode = CheckServerStatus()
+            
+            if hasTarget then
+                if mode == "Fruit" and obj:FindFirstChild("Handle") then
+                    if (root.Position - obj.Handle.Position).Magnitude > 12 then
+                        ApplyFly(root, obj.Handle.Position)
+                    else
+                        if root:FindFirstChild("SigmaFly") then root.SigmaFly:Destroy() end
+                        root.CFrame = obj.Handle.CFrame
+                        task.wait(0.2)
+                        local held = P:FindFirstChild("Backpack"):FindFirstChild(obj.Name) or C:FindFirstChild(obj.Name)
+                        if held and Rem and not Config.StoredFruits[held.Name] then
+                            Rem:InvokeServer("StoreFruit", held.Name, C)
+                            Config.StoredFruits[held.Name] = true
+                        end
+                    end
+                elseif mode == "Boss" and obj:FindFirstChild("HumanoidRootPart") then
+                    root.CFrame = obj.HumanoidRootPart.CFrame * CFrame.new(0, 11, 0)
+                    if Rem then Rem:InvokeServer("Attack", "Combat", true) Rem:InvokeServer("Attack", "Combat", false) end
+                    if C.Humanoid:FindFirstChild("Animator") then
+                        for _, t in ipairs(C.Humanoid.Animator:GetPlayingAnimationTracks()) do t:Stop(0) end
+                    end
+                end
+            else
+                -- Vòng lặp Farm Level khi Server trống mục tiêu VIP
+                local lvl = P:FindFirstChild("Data") and P.Data:FindFirstChild("Level") and P.Data.Level.Value or 1
+                local active = Config.Islands[1]
+                for _, i in ipairs(Config.Islands) do if lvl >= i.M and lvl <= i.X then active = i break end end
+                
+                if (root.Position - active.V).Magnitude > 50 then
+                    ApplyFly(root, active.V)
+                else
+                    if root:FindFirstChild("SigmaFly") then root.SigmaFly:Destroy() end
+                    local targetMob = nil
+                    for _, m in ipairs((W:FindFirstChild("Enemies") or W):GetChildren()) do
+                        if m:IsA("Model") and m:FindFirstChild("Humanoid") and m.Humanoid.Health > 0 and m.Name == active.N then targetMob = m break end
+                    end
+                    
+                    if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
+                        root.CFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, 11, 0)
+                        if Rem then Rem:InvokeServer("Attack", "Combat", true) Rem:InvokeServer("Attack", "Combat", false) end
+                        if C.Humanoid:FindFirstChild("Animator") then
+                            for _, t in ipairs(C.Humanoid.Animator:GetPlayingAnimationTracks()) do t:Stop(0) end
+                        end
+                    else
+                        -- Không có quái để farm và đéo có Boss/Fruit -> Kích hoạt Server Hop tức thì
+                        ExecuteServerHop()
+                    end
+                end
+            end
+        end
+    end
+end)
