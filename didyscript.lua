@@ -1,4 +1,4 @@
--- [[ REDZ-STYLE FAST ATTACK + SMART FARM + AUTO GHOST NOCLIP ]] --
+-- [[ SMART BONE FARM + AUTO EQUIP WEAPON ]] --
 
 _G.BoneFarm = true
 _G.SuperFastAttack = true
@@ -6,27 +6,72 @@ _G.SuperFastAttack = true
 local BoneQuestGiverCFrame = CFrame.new(-9516.993, 172.017, 6078.465)
 local BoneMobNames = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Armor"}
 
--- 1. SUPER FAST ATTACK (Chuẩn Redz Hub)
-local CombatFramework = require(game:GetService("Players").LocalPlayer.PlayerScripts.CombatFramework)
-local AttackRig = require(game:GetService("Players").LocalPlayer.PlayerScripts.CombatFramework.RigController)
+-- HÀM TỰ ĐỘNG CHỌN VÀ TRANG BỊ VŨ KHÍ TỐI ƯU (Melee -> Sword -> Fruit)
+local function autoEquipWeapon()
+    local Player = game.Players.LocalPlayer
+    local Character = Player.Character
+    if not Character then return end
+    
+    -- Nếu trên tay đã cầm sẵn một món vũ khí rồi thì bỏ qua không cần lấy nữa
+    if Character:FindFirstChildOfClass("Tool") then return end
+    
+    -- Quét balo để tìm món đồ ưu tiên
+    local Backpack = Player:FindFirstChild("Backpack")
+    if Backpack then
+        local targetTool = nil
+        
+        -- Bước 1: Ưu tiên tìm Melee (Các loại võ như Godhuman, Superhuman, Sangvine Art...)
+        for _, tool in pairs(Backpack:GetChildren()) do
+            if tool:IsA("Tool") and (tool.ToolTip == "Melee" or string.find(tool.Name, "Combat") or string.find(tool.Name, "Human") or string.find(tool.Name, "Art")) then
+                targetTool = tool
+                break
+            end
+        end
+        
+        -- Bước 2: Nếu không thấy Melee, tìm Kiếm (Sword)
+        if not targetTool then
+            for _, tool in pairs(Backpack:GetChildren()) do
+                if tool:IsA("Tool") and (tool.ToolTip == "Sword" or string.find(tool.Name, "Blade") or string.find(tool.Name, "Katana")) then
+                    targetTool = tool
+                    break
+                end
+            end
+        end
+        
+        -- Bước 3: Nếu vẫn không có, lấy đại Trái ác quỷ hoặc thứ gì có trong balo
+        if not targetTool then
+            targetTool = Backpack:FindFirstChildOfClass("Tool")
+        end
+        
+        -- Tiến hành móc vũ khí ra tay
+        if targetTool then
+            Player.Character.Humanoid:EquipTool(targetTool)
+        end
+    end
+end
 
+-- 1. FAST ATTACK THẾ HỆ MỚI 
+local VirtualInputManager = game:GetService("VirtualInputManager")
 task.spawn(function()
     while task.wait() do
         if _G.SuperFastAttack then
             pcall(function()
-                local ActiveController = CombatFramework.activeController
-                if ActiveController and ActiveController.blades and ActiveController.blades then
-                    ActiveController.timeToNextAttack = -(math.huge)
-                    ActiveController.attacking = false
-                    ActiveController.increment = 3
-                    AttackRig.activeToCode:_attack()
+                -- Gọi hàm tự động lấy vũ khí ra tay liên tục đề phòng bị game tự cất đồ
+                autoEquipWeapon()
+                
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                
+                local Player = game.Players.LocalPlayer
+                if Player.Character and Player.Character:FindFirstChildOfClass("Tool") then
+                    Player.Character:FindFirstChildOfClass("Tool"):Activate()
                 end
             end)
         end
     end
 end)
 
--- 2. LOGIC GOM QUÁI THEO CỤM (5-7 CON)
+-- 2. HỆ THỐNG GOM QUÁI THÔNG MINH (5-7 CON)
 local CurrentTargetCluster = {}
 
 local function isClusterDead()
@@ -43,7 +88,7 @@ end
 local function findNewMobCluster()
     local tempCluster = {}
     local count = 0
-    local enemiesFolder = game:GetService("Workspace").Enemies:GetChildren()
+    local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies") and game:GetService("Workspace").Enemies:GetChildren() or game:GetService("Workspace"):GetChildren()
     
     for _, mob in pairs(enemiesFolder) do
         if table.find(BoneMobNames, mob.Name) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
@@ -55,7 +100,7 @@ local function findNewMobCluster()
     return tempCluster
 end
 
--- 3. VÒNG LẶP ĐIỀU KHIỂN FARM + TỰ ĐỘNG XUYÊN TƯỜNG (NOCLIP)
+-- 3. VÒNG LẶP ĐIỀU KHIỂN CHÍNH + AUTO GHOST NOCLIP
 task.spawn(function()
     while task.wait() do
         if _G.BoneFarm then
@@ -64,18 +109,16 @@ task.spawn(function()
                 local PlayerRoot = Character:FindFirstChild("HumanoidRootPart")
                 if not PlayerRoot then return end
 
-                -- [TỰ ĐỘNG XUYÊN TƯỜNG] Tắt va chạm của nhân vật khi đang farm để không bị kẹt địa hình
                 for _, part in pairs(Character:GetChildren()) do
                     if part:IsA("BasePart") and part.CanCollide then
                         part.CanCollide = false
                     end
                 end
 
-                -- TIẾN HÀNH FARM THEO CỤM
                 if isClusterDead() then
                     CurrentTargetCluster = findNewMobCluster()
                     if #CurrentTargetCluster == 0 then
-                        if (PlayerRoot.Position - BoneQuestGiverCFrame.Position).Magnitude > 20 then
+                        if (PlayerRoot.Position - BoneQuestGiverCFrame.Position).Magnitude > 15 then
                             PlayerRoot.CFrame = BoneQuestGiverCFrame
                         end
                         return
@@ -92,7 +135,6 @@ task.spawn(function()
 
                 if MainMob then
                     local TargetCFrame = MainMob.HumanoidRootPart.CFrame
-                    -- Đứng trên đầu quái 5 studs để né đòn và đấm xuống cho mượt
                     PlayerRoot.CFrame = TargetCFrame * CFrame.new(0, 5, 0)
 
                     for _, mob in pairs(CurrentTargetCluster) do
@@ -114,4 +156,4 @@ task.spawn(function()
     end
 end)
 
-print("[-] Đã kích hoạt Bone Farm + Tự động xuyên tường chống kẹt map!")
+print("[+] Code Đã Thêm Tự Động Chọn Vũ Khí! Bật Phát Chạy Luôn Không Cần Chọn Tay.")
