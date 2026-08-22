@@ -1,207 +1,213 @@
--- [[ W-AZURE STYLE MENU + PACKET QUEST + ZERO ANIMATION FAST ATTACK ]] --
+-- [[ W-AZURE FINAL: MOB SELECTOR + QUEST SYNC + FAST ATTACK ]] --
 
--- Tạo giao diện Menu UI đơn giản (Bảo đảm bật loadstring là hiện)
+repeat task.wait() until game:IsLoaded()
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
+
+-- // CẤU HÌNH CƠ BẢN
+getgenv().Config = {
+    AutoFarm = false,
+    FastAttack = false,
+    SelectedMob = "Living Zombie", -- Mặc định đánh con này
+    QuestID = "HauntedCastleQuest2", -- Quest mặc định
+    Mon = "Living Zombie"
+}
+
+-- Danh sách quái tại Haunted Castle (Sea 3)
+local Mobs = {
+    "Reborn Skeleton", -- Lv 1975
+    "Living Zombie",   -- Lv 2000
+    "Demonic Soul",    -- Lv 2025
+    "Posessed Mummy"   -- Lv 2050
+}
+
+-- // 1. GIAO DIỆN MENU (W-AZURE STYLE)
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Title = Instance.new("TextLabel")
-local ToggleFarm = Instance.new("TextButton")
-local ToggleAttack = Instance.new("TextButton")
+local ToggleBtn = Instance.new("TextButton")
+local MobBtn = Instance.new("TextButton")
+local StatusLabel = Instance.new("TextLabel")
 
-ScreenGui.Parent = game:GetService("CoreGui")
-ScreenGui.Name = "WAzureCustomHub"
+ScreenGui.Name = "WAzureFinal"
+ScreenGui.Parent = LP:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
-MainFrame.Name = "MainFrame"
+-- Khung chính
 MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.Size = UDim2.new(0, 220, 0, 180)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Position = UDim2.new(0.05, 0, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 240, 0, 200)
+MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true -- Có thể giữ chuột để di chuyển Menu trên màn hình
+MainFrame.Draggable = true
 
+-- Tiêu đề
 Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Title.Text = "W-AZURE BONE v1.2"
-Title.TextColor3 = Color3.fromRGB(0, 255, 255)
+Title.Text = "W-AZURE BONE HUB"
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
 
--- Cấu hình các biến trạng thái ban đầu (Mặc định TẮT để bạn chủ động bật trên giao diện)
-_G.BoneFarm = false
-_G.SuperFastAttack = false
+-- Nút Chọn Quái (Mob Selector)
+MobBtn.Parent = MainFrame
+MobBtn.Position = UDim2.new(0.05, 0, 0.25, 0)
+MobBtn.Size = UDim2.new(0.9, 0, 0.2, 0)
+MobBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+MobBtn.Text = "Mob: Living Zombie"
+MobBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
+MobBtn.Font = Enum.Font.GothamBold
+MobBtn.TextSize = 14
 
-ToggleFarm.Parent = MainFrame
-ToggleFarm.Position = UDim2.new(0.05, 0, 0.3, 0)
-ToggleFarm.Size = UDim2.new(0, 200, 0, 40)
-ToggleFarm.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ToggleFarm.Text = "Bone Farm: OFF"
-ToggleFarm.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleFarm.TextSize = 14
+-- Nút Bật/Tắt Auto Farm
+ToggleBtn.Parent = MainFrame
+ToggleBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
+ToggleBtn.Size = UDim2.new(0.9, 0, 0.2, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50) -- Màu đỏ khi tắt
+ToggleBtn.Text = "AUTO FARM: OFF"
+ToggleBtn.TextColor3 = Color3.new(1, 1, 1)
+ToggleBtn.Font = Enum.Font.GothamBlack
+ToggleBtn.TextSize = 16
 
-ToggleFarm.MouseButton1Click:Connect(function()
-    _G.BoneFarm = not _G.BoneFarm
-    if _G.BoneFarm then
-        ToggleFarm.Text = "Bone Farm: ON"
-        ToggleFarm.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-    else
-        ToggleFarm.Text = "Bone Farm: OFF"
-        ToggleFarm.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        _G.SuperFastAttack = false
-        ToggleAttack.Text = "Fast Attack: OFF"
-        ToggleAttack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+-- Trạng thái
+StatusLabel.Parent = MainFrame
+StatusLabel.Position = UDim2.new(0, 0, 0.85, 0)
+StatusLabel.Size = UDim2.new(1, 0, 0, 20)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Status: Idle"
+StatusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+StatusLabel.TextSize = 12
+
+-- // 2. XỬ LÝ SỰ KIỆN NÚT BẤM
+local currentMobIndex = 2 -- Bắt đầu từ Living Zombie
+
+MobBtn.MouseButton1Click:Connect(function()
+    currentMobIndex = currentMobIndex + 1
+    if currentMobIndex > #Mobs then currentMobIndex = 1 end
+    
+    local mobName = Mobs[currentMobIndex]
+    getgenv().Config.SelectedMob = mobName
+    getgenv().Config.Mon = mobName
+    MobBtn.Text = "Mob: " .. mobName
+    
+    -- Cập nhật Quest ID tương ứng với quái
+    if mobName == "Reborn Skeleton" then getgenv().Config.QuestID = "HauntedCastleQuest1"
+    elseif mobName == "Living Zombie" then getgenv().Config.QuestID = "HauntedCastleQuest2"
+    elseif mobName == "Demonic Soul" then getgenv().Config.QuestID = "HauntedCastleQuest3"
+    elseif mobName == "Posessed Mummy" then getgenv().Config.QuestID = "HauntedCastleQuest4"
     end
 end)
 
-ToggleAttack.Parent = MainFrame
-ToggleAttack.Position = UDim2.new(0.05, 0, 0.6, 0)
-ToggleAttack.Size = UDim2.new(0, 200, 0, 40)
-ToggleAttack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-ToggleAttack.Text = "Fast Attack: OFF"
-ToggleAttack.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleAttack.TextSize = 14
-
-ToggleAttack.MouseButton1Click:Connect(function()
-    _G.SuperFastAttack = not _G.SuperFastAttack
-    if _G.SuperFastAttack then
-        ToggleAttack.Text = "Fast Attack: ON"
-        ToggleAttack.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+ToggleBtn.MouseButton1Click:Connect(function()
+    getgenv().Config.AutoFarm = not getgenv().Config.AutoFarm
+    if getgenv().Config.AutoFarm then
+        ToggleBtn.Text = "AUTO FARM: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100) -- Xanh khi bật
+        getgenv().Config.FastAttack = true
     else
-        ToggleAttack.Text = "Fast Attack: OFF"
-        ToggleAttack.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        ToggleBtn.Text = "AUTO FARM: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+        getgenv().Config.FastAttack = false
+        StatusLabel.Text = "Status: Paused"
     end
 end)
 
--- VÀI ĐẶT THÔNG SỐ TOẠ ĐỘ & QUÁI
-local BoneQuestGiverCFrame = CFrame.new(-9516.993, 172.017, 6078.465)
-local BoneMobNames = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Armor"}
-
--- HÀM TỰ ĐỘNG CẦM VŨ KHÍ TỐI ƯU
-local function autoEquipWeapon()
-    local Player = game.Players.LocalPlayer
-    if not Player.Character then return end
-    if Player.Character:FindFirstChildOfClass("Tool") then return end
-    local Backpack = Player:FindFirstChild("Backpack")
-    if Backpack then
-        for _, tool in pairs(Backpack:GetChildren()) do
-            if tool:IsA("Tool") and (tool.ToolTip == "Melee" or string.find(tool.Name, "Combat") or string.find(tool.Name, "Human") or string.find(tool.Name, "Art")) then
-                Player.Character.Humanoid:EquipTool(tool)
-                break
+-- // 3. HÀM HỖ TRỢ FARM (FAST ATTACK + EQUIP + BRING)
+local function EquipMelee()
+    pcall(function()
+        if not LP.Character:FindFirstChildOfClass("Tool") then
+            for _, v in pairs(LP.Backpack:GetChildren()) do
+                if v.ToolTip == "Melee" then
+                    LP.Character.Humanoid:EquipTool(v)
+                    break
+                end
             end
         end
-    end
+    end)
 end
 
--- 1. FIX FAST ATTACK KHÔNG HOẠT ẢNH TRỰC TIẾP QUA SỰ KIỆN NET (Bypass Click)
+-- Fast Attack V2 (No Animation)
 task.spawn(function()
-    while task.wait() do
-        if _G.SuperFastAttack then
+    while true do
+        if getgenv().Config.FastAttack then
             pcall(function()
-                autoEquipWeapon()
-                local Player = game.Players.LocalPlayer
-                local Tool = Player.Character and Player.Character:FindFirstChildOfClass("Tool")
-                if Tool then
-                    -- Gửi tín hiệu kích hoạt đòn đánh gốc trực tiếp lên server, triệt tiêu hoàn toàn animation của Client
-                    game:GetService("ReplicatedStorage").Remotes.Validator:FireServer(math.floor(workspace.DistributedTime * 1000))
-                    Tool:Activate()
+                local Combat = require(LP.PlayerScripts.CombatFramework)
+                local AC = Combat.activeController
+                if AC and AC.blades then
+                    AC.timeToNextAttack = 0
+                    AC.hitboxMagnitude = 55
+                    game:GetService("ReplicatedStorage").RigControllerEvent:FireServer("weaponChange", tostring(AC.currentWeaponModel))
+                    game:GetService("ReplicatedStorage").RigControllerEvent:FireServer("hit", AC.blades, 3, "")
                 end
             end)
         end
+        RunService.Heartbeat:Wait()
     end
 end)
 
--- 2. HỆ THỐNG GOM QUÁI THÔNG MINH
-local CurrentTargetCluster = {}
-
-local function isClusterDead()
-    if #CurrentTargetCluster == 0 then return true end
-    for _, mob in pairs(CurrentTargetCluster) do
-        if mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
-            return false
-        end
-    end
-    return true
-end
-
-local function findNewMobCluster()
-    local tempCluster = {}
-    local count = 0
-    local enemiesFolder = game:GetService("Workspace"):FindFirstChild("Enemies") and game:GetService("Workspace").Enemies:GetChildren() or game:GetService("Workspace"):GetChildren()
-    for _, mob in pairs(enemiesFolder) do
-        if table.find(BoneMobNames, mob.Name) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 and mob:FindFirstChild("HumanoidRootPart") then
-            table.insert(tempCluster, mob)
-            count = count + 1
-            if count >= 6 then break end
-        end
-    end
-    return tempCluster
-end
-
--- 3. VÒNG LẶP CHÍNH: TỰ NHẬN QUEST BẰNG PACKET + GOM QUÁI XUYÊN TƯỜNG
+-- // 4. LOGIC FARM CHÍNH
 task.spawn(function()
-    while task.wait() do
-        if _G.BoneFarm then
+    while true do
+        task.wait()
+        if getgenv().Config.AutoFarm then
             pcall(function()
-                local Character = game.Players.LocalPlayer.Character
-                local PlayerRoot = Character:FindFirstChild("HumanoidRootPart")
-                if not PlayerRoot then return end
-
-                -- Luôn luôn bật Noclip để di chuyển không bị khựng
-                for _, part in pairs(Character:GetChildren()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-
-                -- KHÔNG CLICK NPC - Gửi Packet nhận thẳng Nhiệm vụ "Skeleton" cấp 2500+ (Đổi tên nếu cần nhận quest khác)
-                local PlayerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
-                if PlayerGui and not PlayerGui.Main:FindFirstChild("Quest") then
-                    -- Bay về chạm nhẹ vào tọa độ NPC để đảm bảo khoảng cách hợp lệ với Server
-                    if (PlayerRoot.Position - BoneQuestGiverCFrame.Position).Magnitude > 15 then
-                        PlayerRoot.CFrame = BoneQuestGiverCFrame
-                        task.wait(0.3)
-                    end
-                    -- Gọi lệnh nhận quest trực tiếp của Blox Fruits
-                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", "HauntedCastleQuest2", 1)
-                end
-
-                -- XỬ LÝ GOM QUÁI VÀ ĐÁNH TRẬN
-                if isClusterDead() then
-                    CurrentTargetCluster = findNewMobCluster()
-                    if #CurrentTargetCluster == 0 then
-                        if (PlayerRoot.Position - BoneQuestGiverCFrame.Position).Magnitude > 15 then
-                            PlayerRoot.CFrame = BoneQuestGiverCFrame
+                local QuestGUI = LP.PlayerGui.Main.Quest
+                -- A. NHẬN QUEST
+                if not QuestGUI.Visible then
+                    StatusLabel.Text = "Status: Taking Quest " .. getgenv().Config.SelectedMob
+                    LP.Character.HumanoidRootPart.CFrame = CFrame.new(-9516, 172, 6078) -- Vị trí Quest Giver
+                    task.wait(0.5)
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", getgenv().Config.QuestID, 1)
+                else
+                    -- B. ĐÁNH QUÁI (Theo tên đã chọn)
+                    StatusLabel.Text = "Status: Farming " .. getgenv().Config.SelectedMob
+                    EquipMelee()
+                    
+                    -- Tìm đúng con quái đã chọn trong Menu
+                    local Target = nil
+                    for _, v in pairs(workspace.Enemies:GetChildren()) do
+                        if v.Name == getgenv().Config.SelectedMob and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                            Target = v
+                            break
                         end
-                        return
                     end
-                end
-
-                local MainMob = nil
-                for _, mob in pairs(CurrentTargetCluster) do
-                    if mob and mob:FindFirstChild("HumanoidRootPart") and mob.Humanoid.Health > 0 then
-                        MainMob = mob
-                        break
-                    end
-                end
-
-                if MainMob then
-                    local TargetCFrame = MainMob.HumanoidRootPart.CFrame
-                    -- Đứng khựng ngay trên đầu cụm quái để dội sát thương xuống
-                    PlayerRoot.CFrame = TargetCFrame * CFrame.new(0, 6, 0)
-
-                    for _, mob in pairs(CurrentTargetCluster) do
-                        if mob and mob:FindFirstChild("HumanoidRootPart") and mob.Humanoid.Health > 0 then
-                            mob.HumanoidRootPart.CFrame = TargetCFrame
-                            mob.HumanoidRootPart.CanCollide = false
-                            if mob.Humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-                                mob.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                    
+                    if Target then
+                        -- Tắt va chạm
+                        for _, p in pairs(LP.Character:GetChildren()) do
+                            if p:IsA("BasePart") then p.CanCollide = false end
+                        end
+                        
+                        -- Bay đến quái
+                        LP.Character.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+                        
+                        -- Gom quái (Bring Mob)
+                        for _, v in pairs(workspace.Enemies:GetChildren()) do
+                            if v.Name == getgenv().Config.SelectedMob and (v.HumanoidRootPart.Position - Target.HumanoidRootPart.Position).Magnitude < 300 then
+                                v.HumanoidRootPart.CFrame = Target.HumanoidRootPart.CFrame
+                                v.HumanoidRootPart.CanCollide = false
+                                v.Humanoid.WalkSpeed = 0
                             end
                         end
+                        
+                        -- Click đánh ảo
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(800, 600))
+                    else
+                        -- Không thấy quái thì đứng chờ ở spawn point của quái đó
+                        -- (Tạm thời bay về Quest Giver để an toàn)
+                        StatusLabel.Text = "Status: Waiting for spawn..."
+                        LP.Character.HumanoidRootPart.CFrame = CFrame.new(-9516, 172, 6078)
                     end
-                    _G.SuperFastAttack = true
                 end
             end)
-        else
-            _G.SuperFastAttack = false
         end
     end
 end)
 
-print("[+] Code Đã Vá Lỗi: Tự Động Nhận Quest Packet + Tích Hợp Menu Trực Quan Trên Màn Hình!")
+print("W-AZURE FINAL LOADED")
