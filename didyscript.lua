@@ -1,4 +1,4 @@
--- [[ SIGMA DEX-INTEGRATED W-AZURE CUSTOM HUB ]]
+-- [[ SIGMA FIXED FORMATTING W-AZURE CUSTOM HUB ]]
 local P, W, R = game:GetService("Players").LocalPlayer, game:GetService("Workspace"), game:GetService("ReplicatedStorage")
 local VU, TS, HS, CG, RunService = game:GetService("VirtualUser"), game:GetService("TeleportService"), game:GetService("HttpService"), game:GetService("CoreGui"), game:GetService("RunService")
 
@@ -6,7 +6,6 @@ if not game:IsLoaded() then game.Loaded:Wait() end
 local C = P.Character or P.CharacterAdded:Wait()
 local Rem = R:FindFirstChild("Remotes") or R:FindFirstChild("CommF")
 
--- Hệ thống nạp tọa độ thực tế trích xuất trực tiếp từ Dex Explorer của bạn
 local SigmaConfig = {
     AutoBone = false,
     AutoDoughKing = false,
@@ -14,7 +13,6 @@ local SigmaConfig = {
     FlySpeed = 295,
     StoredFruits = {},
     Coords = {
-        -- Sử dụng chính xác tọa độ Pivot thực tế bạn cung cấp để né kẹt địa hình
         BoneIsland = Vector3.new(-9516.993, 172.017, 6078.465), 
         DoughKingSpawn = Vector3.new(-25, 20, -11500),
         BoneMobNames = {"Reborn Skeleton", "Living Zombie", "Demonic Soul", "Posessed Mummy"}
@@ -117,7 +115,6 @@ task.spawn(function()
             if not C or not C:Parent() then C = P.Character or P.CharacterAdded:Wait() end
             if not Rem then Rem = R:FindFirstChild("Remotes") or R:FindFirstChild("CommF") end
             
-            -- QUÉT VÀ CƯỚP TRÁI ÁC QUỶ ƯU TIÊN CAO NHẤT
             local targetFruit = nil
             for _, o in ipairs(W:GetChildren()) do if o:IsA("Tool") and (string.find(o.Name, "Fruit") or o:FindFirstChild("Handle")) then targetFruit = o break end end
             if targetFruit and targetFruit:FindFirstChild("Handle") then
@@ -129,11 +126,8 @@ task.spawn(function()
                     if held and Rem and not SigmaConfig.StoredFruits[held.Name] then Rem:InvokeServer("StoreFruit", held.Name, C) SigmaConfig.StoredFruits[held.Name] = true end
                 end
             else
-                -- CHẠY THEO TOGGLE CHỨC NĂNG CỨNG
                 if SigmaConfig.AutoBone then
-                    -- Kiểm tra khoảng cách hình học tới tọa độ lấy từ Dex
-                    if (root.Position - SigmaConfig.Coords.BoneIsland).Magnitude > 150 then 
-                        ApplyFly(root, SigmaConfig.Coords.BoneIsland)
+                    if (root.Position - SigmaConfig.Coords.BoneIsland).Magnitude > 150 then ApplyFly(root, SigmaConfig.Coords.BoneIsland)
                     else
                         local fly = root:FindFirstChild("SigmaFly") if fly then fly:Destroy() end
                         local targetMob = nil
@@ -160,3 +154,17 @@ task.spawn(function()
                     end
                     
                 elseif SigmaConfig.AutoChest then
+                    local chest = W:FindFirstChild("Chest1") or W:FindFirstChild("Chest2") or W:FindFirstChild("Chest3")
+                    if chest then
+                        if (root.Position - chest.Position).Magnitude > 10 then ApplyFly(root, chest.Position)
+                        else local fly = root:FindFirstChild("SigmaFly") if fly then fly:Destroy() end root.CFrame = chest.CFrame task.wait(0.1) end
+                    else
+                        local fly = root:FindFirstChild("SigmaFly") if fly then fly:Destroy() end
+                    end
+                else
+                    local fly = root:FindFirstChild("SigmaFly") if fly then fly:Destroy() end
+                end
+            end
+        end
+    end
+end)
